@@ -32,6 +32,11 @@ const loadAsciiArt = () => {
 const editors = document.querySelectorAll('.editor');
 const STORAGE_KEY = 'openTabs';
 const ACTIVE_KEY = 'activeTab';
+const DEFAULT_TABS = [
+  { href: 'index.html', label: 'about.md' },
+  { href: 'projects.html', label: 'projects.py' },
+  { href: 'publications.html', label: 'publications.md' }
+];
 
 const updateEditorState = (editor) => {
   const tabs = editor.querySelectorAll('.tabs .tab');
@@ -167,6 +172,30 @@ const buildTabs = (tabsContainer, tabs, activeHref) => {
   }
 };
 
+const getNormalizedPath = (href) => {
+  if (!href) {
+    return '';
+  }
+
+  try {
+    return new URL(href, window.location.href).pathname;
+  } catch (error) {
+    return href;
+  }
+};
+
+const getDefaultActiveHref = () => {
+  const currentPath = getNormalizedPath(window.location.href);
+  const normalizedCurrent = currentPath.endsWith('/') ? `${currentPath}index.html` : currentPath;
+
+  const match = DEFAULT_TABS.find((tab) => {
+    const tabPath = getNormalizedPath(tab.href);
+    return normalizedCurrent.endsWith(`/${tabPath}`) || normalizedCurrent.endsWith(tabPath);
+  });
+
+  return match ? match.href : DEFAULT_TABS[0].href;
+};
+
 const removeTab = (tab) => {
   if (!tab) {
     return;
@@ -228,14 +257,12 @@ const restoreTabs = (editor) => {
   }
 
   const storedTabs = getStoredTabs();
-  if (!storedTabs) {
-    tabsContainer.querySelectorAll('.tab-close').forEach(attachCloseHandler);
-    return;
-  }
-
   const activeHref = getStoredActive();
-  if (storedTabs.length === 0) {
-    tabsContainer.innerHTML = '';
+
+  if (!storedTabs || storedTabs.length === 0) {
+    const defaultActiveHref = getDefaultActiveHref();
+    buildTabs(tabsContainer, DEFAULT_TABS, defaultActiveHref);
+    storeTabsState(DEFAULT_TABS, defaultActiveHref);
     return;
   }
 
@@ -260,18 +287,6 @@ const openTabFromLink = (editor, href, label) => {
   updateEditorState(editor);
   const activeHref = tabsContainer.querySelector('.tab.active a')?.getAttribute('href') || '';
   storeTabsState(collectTabsFromDom(tabsContainer), activeHref);
-};
-
-const getNormalizedPath = (href) => {
-  if (!href) {
-    return '';
-  }
-
-  try {
-    return new URL(href, window.location.href).pathname;
-  } catch (error) {
-    return href;
-  }
 };
 
 editors.forEach((editor) => {
