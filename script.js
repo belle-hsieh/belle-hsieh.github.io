@@ -184,18 +184,6 @@ const getNormalizedPath = (href) => {
   }
 };
 
-const getDefaultActiveHref = () => {
-  const currentPath = getNormalizedPath(window.location.href);
-  const normalizedCurrent = currentPath.endsWith('/') ? `${currentPath}index.html` : currentPath;
-
-  const match = DEFAULT_TABS.find((tab) => {
-    const tabPath = getNormalizedPath(tab.href);
-    return normalizedCurrent.endsWith(`/${tabPath}`) || normalizedCurrent.endsWith(tabPath);
-  });
-
-  return match ? match.href : DEFAULT_TABS[0].href;
-};
-
 const removeTab = (tab) => {
   if (!tab) {
     return;
@@ -297,7 +285,13 @@ const restoreTabs = (editor) => {
 
   const storedTabs = getStoredTabs();
   const currentHref = getCurrentHref();
-  let tabs = storedTabs && storedTabs.length ? storedTabs : DEFAULT_TABS;
+  let tabs = storedTabs === null ? DEFAULT_TABS : storedTabs;
+
+  if (tabs.length === 0) {
+    buildTabs(tabsContainer, [], '');
+    storeTabsState([], '');
+    return;
+  }
 
   if (currentHref) {
     const hasCurrent = tabs.some((tab) => tab && tab.href === currentHref);
