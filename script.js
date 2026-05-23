@@ -220,25 +220,23 @@ const handleTabClose = (event, button) => {
   const tabsContainer = tab.parentElement;
   const editor = tab.closest('.editor');
   const isActive = tab.classList.contains('active');
-  const nextTab = tab.nextElementSibling || tab.previousElementSibling;
+  const nextTab = tab.previousElementSibling || tab.nextElementSibling;
   removeTab(tab);
 
   if (editor) {
     updateEditorState(editor);
   }
 
-  if (!tabsContainer || !isActive) {
+  if (!tabsContainer) {
     return;
   }
 
-  if (nextTab) {
+  if (isActive && nextTab) {
     setActiveTab(tabsContainer, nextTab);
   }
 
-  if (tabsContainer) {
-    const activeHref = tabsContainer.querySelector('.tab.active a')?.getAttribute('href') || '';
-    storeTabsState(collectTabsFromDom(tabsContainer), activeHref);
-  }
+  const activeHref = tabsContainer.querySelector('.tab.active a')?.getAttribute('href') || '';
+  storeTabsState(collectTabsFromDom(tabsContainer), activeHref);
 };
 
 const attachCloseHandler = (button) => {
@@ -250,6 +248,29 @@ const attachCloseHandler = (button) => {
   button.dataset.bound = 'true';
 };
 
+const getCurrentHref = () => {
+  const currentPath = getNormalizedPath(window.location.href);
+  if (!currentPath) {
+    return '';
+  }
+
+  if (currentPath.endsWith('/')) {
+    return 'index.html';
+  }
+
+  const segments = currentPath.split('/').filter(Boolean);
+  return segments.length ? segments[segments.length - 1] : 'index.html';
+};
+
+const getLabelForHref = (href) => {
+  const match = DEFAULT_TABS.find((tab) => tab.href === href);
+  if (match) {
+    return match.label;
+  }
+
+  return href || 'file';
+};
+
 const restoreTabs = (editor) => {
   const tabsContainer = editor.querySelector('.tabs');
   if (!tabsContainer) {
@@ -257,16 +278,19 @@ const restoreTabs = (editor) => {
   }
 
   const storedTabs = getStoredTabs();
-  const activeHref = getStoredActive();
+  const currentHref = getCurrentHref();
+  let tabs = storedTabs && storedTabs.length ? storedTabs : DEFAULT_TABS;
 
-  if (!storedTabs || storedTabs.length === 0) {
-    const defaultActiveHref = getDefaultActiveHref();
-    buildTabs(tabsContainer, DEFAULT_TABS, defaultActiveHref);
-    storeTabsState(DEFAULT_TABS, defaultActiveHref);
-    return;
+  if (currentHref) {
+    const hasCurrent = tabs.some((tab) => tab && tab.href === currentHref);
+    if (!hasCurrent) {
+      tabs = [...tabs, { href: currentHref, label: getLabelForHref(currentHref) }];
+    }
   }
 
-  buildTabs(tabsContainer, storedTabs, activeHref);
+  const activeHref = currentHref || getStoredActive() || tabs[0]?.href || '';
+  buildTabs(tabsContainer, tabs, activeHref);
+  storeTabsState(tabs, activeHref);
 };
 
 const openTabFromLink = (editor, href, label) => {
