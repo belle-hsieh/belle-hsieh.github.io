@@ -235,8 +235,12 @@ const handleTabClose = (event, button) => {
     setActiveTab(tabsContainer, nextTab);
   }
 
-  const activeHref = tabsContainer.querySelector('.tab.active a')?.getAttribute('href') || '';
+  const activeHref = getTabHref(tabsContainer.querySelector('.tab.active'));
   storeTabsState(collectTabsFromDom(tabsContainer), activeHref);
+
+  if (isActive) {
+    navigateToHref(activeHref);
+  }
 };
 
 const attachCloseHandler = (button) => {
@@ -269,6 +273,20 @@ const getLabelForHref = (href) => {
   }
 
   return href || 'file';
+};
+
+const getTabHref = (tab) => tab?.querySelector('a')?.getAttribute('href') || '';
+
+const navigateToHref = (href) => {
+  if (!href) {
+    return;
+  }
+
+  const targetPath = getNormalizedPath(href);
+  const currentPath = getNormalizedPath(window.location.href);
+  if (targetPath && targetPath !== currentPath) {
+    window.location.href = href;
+  }
 };
 
 const restoreTabs = (editor) => {
